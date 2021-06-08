@@ -4,19 +4,19 @@
   "description": "電気力線の表示",
   "main": "src/app.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "webpack",
+    "watch": "webpack -w"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ythknakamura/ElectronicLineOfForce.git"
+    "url": "git+https://github.com/phys-edu/ElectronicLineOfForce.git"
   },
   "author": "Nakamura",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ythknakamura/ElectronicLineOfForce/issues"
-  },
-  "homepage": "https://github.com/ythknakamura/ElectronicLineOfForce#readme",
   "devDependencies": {
+    "@types/three": "^0.129.1",
+    "css-loader": "^5.2.6",
+    "style-loader": "^2.0.0",
     "ts-loader": "^9.2.3",
     "typescript": "^4.3.2",
     "webpack": "^5.38.1",
