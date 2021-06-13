@@ -8,9 +8,12 @@ const camera = new THREE.PerspectiveCamera(45, null, 0.1, 1000);
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 
-let params = new function () {
+/*
+const params = new function () {
     this.height = 10;
-}
+}*/
+const params = { height: 10 };
+
 function onResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
