@@ -9,7 +9,7 @@ const camera = new THREE.PerspectiveCamera(45, null, 0.1, 100);
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 
-const params = { height: 10 };
+const params = { r: 3 };
 
 function onResize() :void {
     const width = window.innerWidth;
@@ -21,54 +21,68 @@ function onResize() :void {
 }
 class Denkirikisen{
     group: THREE.Group;
-    private lines : THREE.Line[];
+    private lines: THREE.Line[];
+    private shell: THREE.Mesh;
     
-    constructor(public shellD: number) {
-        const num = 250;    // 電気力線の本数
-        const radius = 15;  // 電気力線の半径
-        const objColor1 = 0xff3333; // 電気力線の色（通常）
-        const objColor2 = 0x33ff33; // 電気力線の色 (交差)
-        const shellAngle = 0.5; // shellの立体角の制御
-        const lineMaterial1 = new THREE.LineBasicMaterial({ color: objColor1 });
-        const lineMaterial2 = new THREE.LineBasicMaterial({ color: objColor2 });
+    private readonly lineMaterial1 = new THREE.LineBasicMaterial({ color: 0xff3333 });
+    private readonly lineMaterial2 = new THREE.LineBasicMaterial({ color: 0x33ff33 });
+    private readonly num = 250;    // 電気力線の本数
+    private readonly radius = 15;  // 電気力線の半径
+    readonly shellR_Min = 1;
+    readonly shellR_Max = this.radius;
+
+    calcShellAngle(shellR:number) {
+        return Math.acos(1 - 2 * (this.shellR_Min / shellR)**2);
+    }
+    constructor(targetPos: Vector3) {
+        const shellR = this.shellR_Min;
         const centerP = new THREE.Vector3(0, 0, 0);
   
         this.group = new THREE.Group;
-        this.lines = new Array(num);
-        for (let i = 0; i < num; i++) {
+        this.lines = new Array(this.num);
+        const shellAngle = this.calcShellAngle(shellR);
+        for (let i = 0; i < this.num; i++) {
             const p = i + 0.5;
-            const phi = Math.acos(1 - 2.0 * p / num);
+            const phi = Math.acos(1 - 2.0 * p / this.num);
             const theta = Math.PI * (1 + Math.sqrt(5.0)) * p;
             const p1 = (new THREE.Vector3(
                 Math.cos(theta) * Math.sin(phi),
                 Math.cos(phi),
                 Math.sin(theta) * Math.sin(phi)
-            )).multiplyScalar(radius);
+            )).multiplyScalar(this.radius);
             const geo = new THREE.BufferGeometry().setFromPoints([centerP, p1]);
-            this.lines[i] = new THREE.Line(geo, phi > shellAngle ? lineMaterial1 : lineMaterial2);
+            this.lines[i] = new THREE.Line(geo, undefined);
             this.group.add(this.lines[i]);
         }
 
+        this.shell = null;
+        this.setShell(shellR);
+
         const sphereGeometry = new THREE.SphereBufferGeometry(0.5, 10, 10);
-        const sphereMaterial = new THREE.MeshLambertMaterial({ color: objColor1 });
+        const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xff3333 });
         const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
         sphere.castShadow = true;
         this.group.add(sphere);
 
-        const shellGeometry = new THREE.SphereBufferGeometry(shellD, 30, 10, 0, Math.PI * 2, 0, shellAngle);
-        const shellMaterial = new THREE.MeshLambertMaterial({ color: 0x5555ff, side: THREE.DoubleSide });
-        const shell = new THREE.Mesh(shellGeometry, shellMaterial);
-        shell.castShadow = true;
-        this.group.add(shell);
         this.group.rotation.x = Math.PI / 2;
+        this.group.position.copy(targetPos);
     }
-    setPosition(pos: THREE.Vector3) {
-        this.group.position.copy(pos);
-    }
-    setShellAngle(angle: number) {
-        for (const l of this.lines) {
-            l.material = new THREE.LineBasicMaterial({ color: 0x888888 });
-            ////////////////////
+
+    setShell(shellR: number) {
+        const shellAngle = this.calcShellAngle(shellR);
+        
+        const shellGeometry = new THREE.SphereBufferGeometry(shellR, 30, 10, 0, Math.PI * 2, 0, shellAngle);
+        const shellMaterial = new THREE.MeshLambertMaterial({ color: 0x5555ff, side: THREE.DoubleSide });
+        if (this.shell!=null) this.group.remove(this.shell);
+        this.shell = new THREE.Mesh(shellGeometry, shellMaterial);
+        this.shell.castShadow = true;
+        this.group.add(this.shell);
+
+        const num = this.lines.length;
+        for (let i = 0; i < num; i++) {
+            const p = i + 0.5;
+            const phi = Math.acos(1 - 2.0 * p / num);
+            this.lines[i].material = phi > shellAngle ? this.lineMaterial1 : this.lineMaterial2;
         }
     }
 }
@@ -106,20 +120,18 @@ window.addEventListener("DOMContentLoaded", () => {
     plane.receiveShadow = true;
     scene.add(plane);
     
-    const denkirikisen = new Denkirikisen(10);
-    denkirikisen.setPosition(targetPos);
+    const denkirikisen = new Denkirikisen(targetPos);
     scene.add(denkirikisen.group);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     const gui = new GUI();
-    gui.add(params , 'height', 0, 100);
+    gui.add(params , 'r', 1, 10);
     gui.open();
 
     onResize();
     const render = function () {
         stats.update();
-
-        //denkirikisen.position.z = params.height;
+        denkirikisen.setShell(params.r);
         window.requestAnimationFrame(render);
         renderer.render(scene, camera);
     };
